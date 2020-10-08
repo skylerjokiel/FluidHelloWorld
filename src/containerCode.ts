@@ -6,6 +6,7 @@
 import { ContainerRuntimeFactoryWithDefaultDataStore } from "@fluidframework/aqueduct";
 
 import { DiceRollerInstantiationFactory } from "./dataObject";
+import { IFluidRandomNumber, RandNumberGenerator } from "./provider";
 
 /**
  * The DiceRollerContainerRuntimeFactory is the container code for our scenario.
@@ -22,4 +23,10 @@ export const DiceRollerContainerRuntimeFactory = new ContainerRuntimeFactoryWith
     new Map([
         DiceRollerInstantiationFactory.registryEntry,
     ]),
+    [
+        {
+            type: IFluidRandomNumber,
+            provider: new RandNumberGenerator(),
+        }
+    ]
 );

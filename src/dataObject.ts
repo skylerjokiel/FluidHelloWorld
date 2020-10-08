@@ -7,6 +7,8 @@ import { EventEmitter } from "events";
 import { DataObject, DataObjectFactory } from "@fluidframework/aqueduct";
 import { IValueChanged } from "@fluidframework/map";
 
+import { IFluidRandomNumber } from "./provider";
+
 /**
  * IDiceRoller describes the public API surface for our dice roller data object.
  */
@@ -22,6 +24,11 @@ export interface IDiceRoller extends EventEmitter {
     roll: () => void;
 
     /**
+     * Get a random number
+     */
+    getRandomNumber: () => number;
+
+    /**
      * The diceRolled event will fire whenever someone rolls the device, either locally or remotely.
      */
     on(event: "diceRolled", listener: () => void): this;
@@ -33,7 +40,10 @@ const diceValueKey = "diceValue";
 /**
  * The DiceRoller is our data object that implements the IDiceRoller interface.
  */
-export class DiceRoller extends DataObject implements IDiceRoller {
+export class DiceRoller extends DataObject<IFluidRandomNumber> implements IDiceRoller {
+
+    private randomNumberGenerator: IFluidRandomNumber | undefined;
+
     /**
      * initializingFirstTime is run only once by the first client to create the DataObject.  Here we use it to
      * initialize the state of the DataObject.
@@ -53,6 +63,8 @@ export class DiceRoller extends DataObject implements IDiceRoller {
                 this.emit("diceRolled");
             }
         });
+
+        this.randomNumberGenerator = await this.providers.IFluidRandomNumber;
     }
 
     public get value() {
@@ -63,6 +75,14 @@ export class DiceRoller extends DataObject implements IDiceRoller {
         const rollValue = Math.floor(Math.random() * 6) + 1;
         this.root.set(diceValueKey, rollValue);
     };
+
+    public readonly getRandomNumber = ()  => {
+        if (!this.randomNumberGenerator) {
+            return -1;
+        }
+
+        return this.randomNumberGenerator.getRandomNumber();
+    }
 }
 
 /**
@@ -73,5 +93,5 @@ export const DiceRollerInstantiationFactory = new DataObjectFactory(
     "dice-roller",
     DiceRoller,
     [],
-    {},
+    { IFluidRandomNumber }
 );

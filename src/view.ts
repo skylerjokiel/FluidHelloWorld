@@ -34,6 +34,19 @@ export function renderDiceRoller(diceRoller: IDiceRoller, div: HTMLDivElement) {
     };
     updateDiceChar();
 
+
+    // Random Number Generator Provider Button
+
+    const genButton = document.createElement("button");
+    genButton.style.fontSize = "50px";
+    const setGenButtonText = () => {
+        genButton.textContent = diceRoller.getRandomNumber().toString();
+    }
+    setGenButtonText();
+    genButton.addEventListener("click", setGenButtonText);
+    wrapperDiv.appendChild(genButton);
+
+
     // Use the diceRolled event to trigger the rerender whenever the value changes.
     diceRoller.on("diceRolled", updateDiceChar);
 }
