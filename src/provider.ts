@@ -22,6 +22,7 @@ export interface IFluidRandomNumber extends IProvideFluidRandomNumber {
 }
 
 // The Provider itself
+// Note that there is nothing collaborative about this. It's simply a class
 
 export class RandNumberGenerator implements IFluidRandomNumber{
     public get IFluidRandomNumber() { return this; }
