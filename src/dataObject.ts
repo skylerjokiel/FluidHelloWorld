@@ -17,18 +17,30 @@ export interface IDiceRoller extends EventEmitter {
     readonly value: number;
 
     /**
+     * Denotes if the session has ended
+     */
+    readonly ended: boolean;
+
+    /**
      * Roll the dice.  Will cause a "diceRolled" event to be emitted.
      */
     roll: () => void;
 
+
+    /**
+     * Ends the current session
+     */
+    endSession: () => void;
+
     /**
      * The diceRolled event will fire whenever someone rolls the device, either locally or remotely.
      */
-    on(event: "diceRolled", listener: () => void): this;
+    on(event: "update", listener: () => void): this;
 }
 
 // The root is map-like, so we'll use this key for storing the value.
 const diceValueKey = "diceValue";
+const sessionEndKey = "sessionEndKey";
 
 /**
  * The DiceRoller is our data object that implements the IDiceRoller interface.
@@ -39,7 +51,8 @@ export class DiceRoller extends DataObject implements IDiceRoller {
      * initialize the state of the DataObject.
      */
     protected async initializingFirstTime() {
-        this.root.set(diceValueKey, 1);
+        const value = await this.sendRequest("GET");
+        this.root.set(diceValueKey, value);
     }
 
     /**
@@ -47,22 +60,69 @@ export class DiceRoller extends DataObject implements IDiceRoller {
      * DataObject, by registering an event listener for dice rolls.
      */
     protected async hasInitialized() {
+        if (this.ended) {
+            return;
+        }
         this.root.on("valueChanged", (changed: IValueChanged) => {
-            if (changed.key === diceValueKey) {
+            if (changed.key === diceValueKey || changed.key === sessionEndKey) {
                 // When we see the dice value change, we'll emit the diceRolled event we specified in our interface.
-                this.emit("diceRolled");
+                this.emit("update");
             }
         });
+
+        // check to see if there's a new value if we are loading an old session.
+        const response = await this.sendRequest("GET");
+        this.root.set(diceValueKey, response);
+    }
+
+    public get ended(): boolean {
+        return this.root.get(sessionEndKey) ?? false;
+    }
+
+    public readonly endSession = (): void => {
+        this.root.set(sessionEndKey, true);
+        this.sendRequest("POST", this.value);
     }
 
     public get value() {
         return this.root.get(diceValueKey);
     }
 
-    public readonly roll = () => {
+    public readonly roll = (): void => {
+        if (this.ended) {
+            return;
+        }
         const rollValue = Math.floor(Math.random() * 6) + 1;
         this.root.set(diceValueKey, rollValue);
     };
+
+    private async sendRequest(type: "GET"|"POST", payload?:number): Promise<number> {
+            // Creating the XMLHttpRequest object
+        var request = new XMLHttpRequest();
+
+        // Instantiating the request object
+        request.open(type, "http://localhost:8000");
+
+        // Doing some fancy stuff so I can use async/await
+        let res: (value: number | PromiseLike<number>) => void;
+        const p = new Promise<number>((r) => res = r);
+        // Defining event listener for readystatechange event
+        request.onreadystatechange = function() {
+            // Check if the request is compete and was successful
+            if (request.readyState === request.DONE){
+                console.log(`RESPONSE: ${request.status}-${request.responseText}`);
+                res(parseInt(request.responseText));   
+            }
+        };
+
+        // Sending the request to the server
+        if (type === "POST") {
+            request.send(payload?.toString())
+        } else {
+            request.send();
+        }
+        return p;
+    }
 }
 
 /**

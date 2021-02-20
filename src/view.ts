@@ -24,16 +24,32 @@ export function renderDiceRoller(diceRoller: IDiceRoller, div: HTMLDivElement) {
     // Call the roll method to modify the shared data when the button is clicked.
     rollButton.addEventListener("click", diceRoller.roll);
 
-    wrapperDiv.append(diceCharDiv, rollButton);
+    const sessionEndedButton = document.createElement("button");
+    sessionEndedButton.style.fontSize = "50px";
+    sessionEndedButton.textContent = "End Session";
+    sessionEndedButton.addEventListener("click", diceRoller.endSession);
+
+    const sessionEndedDiv = document.createElement("div");
+    sessionEndedDiv.style.fontSize = "50px";
+    sessionEndedDiv.style.display = "none";
+    sessionEndedDiv.textContent = "Session Ended";
+
+    wrapperDiv.append(diceCharDiv, rollButton, sessionEndedButton,sessionEndedDiv);
 
     // Get the current value of the shared data to update the view whenever it changes.
     const updateDiceChar = () => {
         // Unicode 0x2680-0x2685 are the sides of a dice (⚀⚁⚂⚃⚄⚅)
-        diceCharDiv.textContent = String.fromCodePoint(0x267F + diceRoller.value);
+        diceCharDiv.textContent = diceRoller.value.toString();
         diceCharDiv.style.color = `hsl(${diceRoller.value * 60}, 70%, 50%)`;
+
+        if(diceRoller.ended) {
+            rollButton.disabled = true;
+            sessionEndedButton.disabled = true;
+            sessionEndedDiv.style.display = "block";
+        }
     };
     updateDiceChar();
 
     // Use the diceRolled event to trigger the rerender whenever the value changes.
-    diceRoller.on("diceRolled", updateDiceChar);
+    diceRoller.on("update", updateDiceChar);
 }
